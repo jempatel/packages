@@ -28,6 +28,23 @@ update_last_sync_status() {
 	uci_set_state keepalived "$cfg" last_sync_status "$status"
 }
 
+get_ssh_opts() {
+	local ssh_variant local ssh_opts
+
+	ssh_variant=$(ssh -V 2>&1)
+
+	case "$ssh_package" in
+		OpenSSH*)
+			ssh_opts="-o StrictHostKeyChecking=no"
+			;;
+		Dropbear*)
+			ssh_opts="-y -y"
+			;;
+	esac
+
+	echo "$ssh_opts"
+}
+
 ha_sync_send() {
 	local cfg=$1
 	local address ssh_key ssh_port sync_list sync_dir sync_file count
@@ -52,7 +69,7 @@ ha_sync_send() {
 		list_contains dirs_list "${sync_dir}${dir}" || append dirs_list "${sync_dir}${dir}"
 	done
 
-	ssh_options="-y -y -i $ssh_key -p $ssh_port"
+	ssh_options="$(get_ssh_opts) -i $ssh_key -p $ssh_port"
 	ssh_remote="$RSYNC_USER@$address"
 
 	# shellcheck disable=SC2086
